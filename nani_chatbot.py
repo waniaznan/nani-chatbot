@@ -43,7 +43,7 @@ def detect_language(text):
 async def summarize_intent(message: str) -> str:
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Summarize customer's intent from this message in one short sentence."},
                 {"role": "user", "content": message},
