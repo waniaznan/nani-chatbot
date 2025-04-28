@@ -55,26 +55,24 @@ async def summarize_intent(message: str) -> str:
     except Exception:
         return message
 
-# Generate chatbot response
+# Construct OpenAI prompt
 async def generate_response(message: str, language: str) -> str:
-    if len(message) > 300:
-        message = await summarize_intent(message)
-
-    prompt = f"You are Nani, a polite, helpful sales assistant for a frozen food business. Answer customer inquiries in {'Malay' if language == 'ms' else 'English'} clearly, friendly, persuasive, and help close the sale."
+    prompt = f"You are Nani, a polite, helpful sales assistant for a frozen food business. Answer customer inquiries in {'Malay' if language == 'ms' else 'English'} clearly and assist in closing the sale. Be professional and friendly. Message: {message}"
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o",  # Make sure your account has access
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": message},
             ],
-            temperature=0.6,
-            max_tokens=500
+            temperature=0.7,
+            max_tokens=300
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return "Sorry, I'm currently unavailable. Please try again shortly."
+        # Return more detailed error message
+        return f"Sorry, an error occurred: {str(e)}"
 
 @app.post("/chat")
 async def chat_endpoint(chat_request: ChatRequest):
