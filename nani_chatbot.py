@@ -1,19 +1,21 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import openai
+from openai import OpenAI
 from langdetect import detect
 from fuzzywuzzy import fuzz
 
 # Load environment variables from .env file
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Setup OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
-# CORS configuration for web frontend
+# CORS configuration for frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,11 +27,11 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
 
-# Helper function to correct typos (basic fuzzy matching)
+# Smarter typo detection
 def is_similar(input_text, keyword):
-    return fuzz.partial_ratio(input_text.lower(), keyword.lower()) > 80
+    return fuzz.token_sort_ratio(input_text.lower(), keyword.lower()) > 80
 
-# Detect language for multilingual support
+# Language detection
 def detect_language(text):
     try:
         lang = detect(text)
@@ -37,28 +39,42 @@ def detect_language(text):
     except:
         return "en"
 
-# Construct OpenAI prompt
+# Summarize intent if message too long
+async def summarize_intent(message: str) -> str:
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Summarize customer's intent from this message in one short sentence."},
+                {"role": "user", "content": message},
+            ],
+            temperature=0.5,
+            max_tokens=50,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception:
+        return message
+
+# Generate chatbot response
 async def generate_response(message: str, language: str) -> str:
-    prompt = f"You are Nani, a polite, helpful sales assistant for a frozen food business. Answer customer inquiries in {'Malay' if language == 'ms' else 'English'} clearly and assist in closing the sale. Be professional and friendly. Message: {message}"
+    if len(message) > 300:
+        message = await summarize_intent(message)
+
+    prompt = f"You are Nani, a polite, helpful sales assistant for a frozen food business. Answer customer inquiries in {'Malay' if language == 'ms' else 'English'} clearly, friendly, persuasive, and help close the sale."
 
     try:
-        from openai import OpenAI
-
-        client = OpenAI()
-
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": message},
             ],
-            temperature=0.7,
-            max_tokens=300
+            temperature=0.6,
+            max_tokens=500
         )
         return response.choices[0].message.content.strip()
-
     except Exception as e:
-        return f"Error generating response: {str(e)}"
+        return "Sorry, I'm currently unavailable. Please try again shortly."
 
 @app.post("/chat")
 async def chat_endpoint(chat_request: ChatRequest):
@@ -67,4 +83,5 @@ async def chat_endpoint(chat_request: ChatRequest):
     reply = await generate_response(user_message, language)
     return {"response": reply}
 
-# Run with: uvicorn nani_chatbot:app --reload
+# Run this app locally with:
+# uvicorn nani_chatbot:app --reload
