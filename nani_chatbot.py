@@ -44,19 +44,18 @@ async def generate_response(message: str, language: str) -> str:
     try:
         from openai import OpenAI
 
-client = OpenAI()
+        client = OpenAI()
 
-response = client.chat.completions.create(
-    model="gpt-4",
-    messages=[
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": message},
-    ],
-    temperature=0.7,
-    max_tokens=300
-)
-
-return response.choices[0].message.content.strip()
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": message},
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
         return f"Error generating response: {str(e)}"
