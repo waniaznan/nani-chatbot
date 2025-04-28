@@ -42,16 +42,22 @@ async def generate_response(message: str, language: str) -> str:
     prompt = f"You are Nani, a polite, helpful sales assistant for a frozen food business. Answer customer inquiries in {'Malay' if language == 'ms' else 'English'} clearly and assist in closing the sale. Be professional and friendly. Message: {message}"
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": message},
-            ],
-            temperature=0.7,
-            max_tokens=300
-        )
-        return response.choices[0].message['content'].strip()
+        from openai import OpenAI
+
+client = OpenAI()
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": message},
+    ],
+    temperature=0.7,
+    max_tokens=300
+)
+
+return response.choices[0].message.content.strip()
+
     except Exception as e:
         return f"Error generating response: {str(e)}"
 
